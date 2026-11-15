@@ -34,33 +34,40 @@ function createFood() {
   };
 }
 
-document.addEventListener("keydown", changeDirection);
-
-function changeDirection(event) {
-  const key = event.key;
-
-  if (key === "ArrowUp" && direction !== "DOWN") {
+function changeDirection(newDirection) {
+  if (newDirection === "UP" && direction !== "DOWN") {
     direction = "UP";
-  } else if (key === "ArrowDown" && direction !== "UP") {
+  }
+
+  if (newDirection === "DOWN" && direction !== "UP") {
     direction = "DOWN";
-  } else if (key === "ArrowLeft" && direction !== "RIGHT") {
+  }
+
+  if (newDirection === "LEFT" && direction !== "RIGHT") {
     direction = "LEFT";
-  } else if (key === "ArrowRight" && direction !== "LEFT") {
+  }
+
+  if (newDirection === "RIGHT" && direction !== "LEFT") {
     direction = "RIGHT";
   }
 }
+
+document.addEventListener("keydown", function(event) {
+  if (event.key === "ArrowUp") changeDirection("UP");
+  if (event.key === "ArrowDown") changeDirection("DOWN");
+  if (event.key === "ArrowLeft") changeDirection("LEFT");
+  if (event.key === "ArrowRight") changeDirection("RIGHT");
+});
 
 function drawGame() {
   ctx.fillStyle = "#222";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Draw snake
   snake.forEach((part, index) => {
     ctx.fillStyle = index === 0 ? "lime" : "green";
     ctx.fillRect(part.x, part.y, box, box);
   });
 
-  // Draw food
   ctx.fillStyle = "red";
   ctx.fillRect(food.x, food.y, box, box);
 
@@ -72,7 +79,6 @@ function drawGame() {
   if (direction === "LEFT") headX -= box;
   if (direction === "RIGHT") headX += box;
 
-  // Game over if snake hits wall
   if (
     headX < 0 ||
     headY < 0 ||
@@ -81,7 +87,7 @@ function drawGame() {
     hitSnake(headX, headY)
   ) {
     clearInterval(game);
-    alert("Game Over! Your score: " + score);
+    alert("Game Over! Score: " + score);
     return;
   }
 
@@ -92,7 +98,6 @@ function drawGame() {
 
   snake.unshift(newHead);
 
-  // Eat food
   if (headX === food.x && headY === food.y) {
     score++;
     document.getElementById("score").textContent = score;
