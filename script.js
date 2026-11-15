@@ -1,6 +1,32 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+let audio;
+
 function playSound(frequency, duration) {
+  if (!audio) {
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  if (audio.state === "suspended") {
+    audio.resume();
+  }
+
+  const oscillator = audio.createOscillator();
+  const gain = audio.createGain();
+
+  oscillator.connect(gain);
+  gain.connect(audio.destination);
+
+  oscillator.frequency.value = frequency;
+  gain.gain.setValueAtTime(0.1, audio.currentTime);
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    audio.currentTime + duration
+  );
+
+  oscillator.start();
+  oscillator.stop(audio.currentTime + duration);
+}
   const audio = new (window.AudioContext || window.webkitAudioContext)();
   const oscillator = audio.createOscillator();
   const gain = audio.createGain();
