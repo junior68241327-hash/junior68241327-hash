@@ -1,6 +1,33 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+function playSound(frequency, duration) {
+  const audio = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audio.createOscillator();
+  const gain = audio.createGain();
 
+  oscillator.connect(gain);
+  gain.connect(audio.destination);
+
+  oscillator.frequency.value = frequency;
+  gain.gain.value = 0.1;
+
+  oscillator.start();
+
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    audio.currentTime + duration
+  );
+
+  oscillator.stop(audio.currentTime + duration);
+}
+
+function eatSound() {
+  playSound(600, 0.15);
+}
+
+function gameOverSound() {
+  playSound(150, 0.5);
+}
 const box = 20;
 
 let snake;
@@ -115,7 +142,8 @@ function drawGame() {
   snake.unshift(newHead);
 
   if (headX === food.x && headY === food.y) {
-    score++;
+  score++;
+  eatSound();
 
     if (score % 5 === 0) {
       level++;
@@ -177,7 +205,7 @@ function updateInfo() {
 function endGame() {
   clearInterval(game);
   gameOver = true;
-
+gameOverSound();
   const finalScore = document.getElementById("finalScore");
 
   if (finalScore) {
