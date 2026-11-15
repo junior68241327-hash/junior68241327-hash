@@ -24,7 +24,7 @@ function startGame() {
   createFood();
 
   clearInterval(game);
-  game = setInterval(drawGame, 210);
+  game = setInterval(drawGame, 300);
 }
 
 function createFood() {
