@@ -1,50 +1,55 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+
+const box = 20;
+const speed = 150;
+
+let snake;
+let food;
+let direction;
+let score = 0;
+let level = 1;
+let game;
+let paused = false;
+let gameOver = false;
 let audio;
 
+let highScore = Number(localStorage.getItem("snakeHighScore")) || 0;
+
+// SOUND SYSTEM
 function playSound(frequency, duration) {
-  if (!audio) {
-    audio = new (window.AudioContext || window.webkitAudioContext)();
+  try {
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) return;
+
+    if (!audio) {
+      audio = new AudioContextClass();
+    }
+
+    if (audio.state === "suspended") {
+      audio.resume();
+    }
+
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(0.1, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      audio.currentTime + duration
+    );
+
+    oscillator.start();
+    oscillator.stop(audio.currentTime + duration);
+  } catch (error) {
+    console.log("Sound error:", error);
   }
-
-  if (audio.state === "suspended") {
-    audio.resume();
-  }
-
-  const oscillator = audio.createOscillator();
-  const gain = audio.createGain();
-
-  oscillator.connect(gain);
-  gain.connect(audio.destination);
-
-  oscillator.frequency.value = frequency;
-  gain.gain.setValueAtTime(0.1, audio.currentTime);
-  gain.gain.exponentialRampToValueAtTime(
-    0.001,
-    audio.currentTime + duration
-  );
-
-  oscillator.start();
-  oscillator.stop(audio.currentTime + duration);
-}
-  const audio = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audio.createOscillator();
-  const gain = audio.createGain();
-
-  oscillator.connect(gain);
-  gain.connect(audio.destination);
-
-  oscillator.frequency.value = frequency;
-  gain.gain.value = 0.1;
-
-  oscillator.start();
-
-  gain.gain.exponentialRampToValueAtTime(
-    0.001,
-    audio.currentTime + duration
-  );
-
-  oscillator.stop(audio.currentTime + duration);
 }
 
 function eatSound() {
@@ -54,19 +59,8 @@ function eatSound() {
 function gameOverSound() {
   playSound(150, 0.5);
 }
-const box = 20;
 
-let snake;
-let food;
-let direction;
-let score;
-let level;
-let game;
-let paused = false;
-let gameOver = false;
-
-let highScore = localStorage.getItem("snakeHighScore") || 0;
-
+// START GAME
 function startGame() {
   snake = [
     { x: 200, y: 200 },
@@ -84,52 +78,69 @@ function startGame() {
   createFood();
 
   clearInterval(game);
-  game = setInterval(drawGame, 150);
+  game = setInterval(drawGame, speed);
+
+  const pauseButton = document.getElementById("pause");
+  if (pauseButton) {
+    pauseButton.textContent = "⏸️ Pause";
+  }
 
   hideGameOver();
+  drawGame();
 }
 
+// CREATE FOOD
 function createFood() {
-  food = {
-    x: Math.floor(Math.random() * (canvas.width / box)) * box,
-    y: Math.floor(Math.random() * (canvas.height / box)) * box
-  };
+  let newFood;
+
+  do {
+    newFood = {
+      x: Math.floor(Math.random() * (canvas.width / box)) * box,
+      y: Math.floor(Math.random() * (canvas.height / box)) * box
+    };
+  } while (
+    snake.some(part =>
+      part.x === newFood.x && part.y === newFood.y
+    )
+  );
+
+  food = newFood;
 }
 
+// CHANGE DIRECTION
 function changeDirection(newDirection) {
   if (paused || gameOver) return;
 
   if (newDirection === "UP" && direction !== "DOWN") {
     direction = "UP";
-  }
-
-  if (newDirection === "DOWN" && direction !== "UP") {
+  } else if (newDirection === "DOWN" && direction !== "UP") {
     direction = "DOWN";
-  }
-
-  if (newDirection === "LEFT" && direction !== "RIGHT") {
+  } else if (newDirection === "LEFT" && direction !== "RIGHT") {
     direction = "LEFT";
-  }
-
-  if (newDirection === "RIGHT" && direction !== "LEFT") {
+  } else if (newDirection === "RIGHT" && direction !== "LEFT") {
     direction = "RIGHT";
   }
 }
 
+// KEYBOARD CONTROLS
 document.addEventListener("keydown", function(event) {
   if (event.key === "ArrowUp") changeDirection("UP");
   if (event.key === "ArrowDown") changeDirection("DOWN");
   if (event.key === "ArrowLeft") changeDirection("LEFT");
   if (event.key === "ArrowRight") changeDirection("RIGHT");
 
-  if (event.key === " " || event.key === "p") {
+  if (event.key === " " || event.key.toLowerCase() === "p") {
+    event.preventDefault();
     togglePause();
   }
 });
 
+// DRAW GAME
 function drawGame() {
   ctx.fillStyle = "#222";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (!snake || !food) return;
 
   snake.forEach((part, index) => {
     ctx.fillStyle = index === 0 ? "lime" : "green";
@@ -149,31 +160,26 @@ function drawGame() {
   if (direction === "LEFT") headX -= box;
   if (direction === "RIGHT") headX += box;
 
+  const eating = headX === food.x && headY === food.y;
+
   if (
     headX < 0 ||
     headY < 0 ||
     headX >= canvas.width ||
     headY >= canvas.height ||
-    hitSnake(headX, headY)
+    hitSnake(headX, headY, eating)
   ) {
     endGame();
     return;
   }
 
-  const newHead = {
-    x: headX,
-    y: headY
-  };
+  snake.unshift({ x: headX, y: headY });
 
-  snake.unshift(newHead);
+  if (eating) {
+    score++;
+    eatSound();
 
-  if (headX === food.x && headY === food.y) {
-  score++;
-
-    if (score % 5 === 0) {
-      level++;
-      changeSpeed();
-    }
+    level = Math.floor(score / 5) + 1;
 
     if (score > highScore) {
       highScore = score;
@@ -187,24 +193,14 @@ function drawGame() {
   }
 }
 
-function hitSnake(x, y) {
-  for (let i = 0; i < snake.length; i++) {
-    if (snake[i].x === x && snake[i].y === y) {
-      return true;
-    }
-  }
+// CHECK COLLISION
+function hitSnake(x, y, eating) {
+  const body = eating ? snake : snake.slice(0, -1);
 
-  return false;
+  return body.some(part => part.x === x && part.y === y);
 }
 
-function changeSpeed() {
-  clearInterval(game);
-
-  let speed = 200;
-
-  game = setInterval(drawGame, speed);
-}
-
+// PAUSE AND RESUME
 function togglePause() {
   if (gameOver) return;
 
@@ -215,8 +211,13 @@ function togglePause() {
   if (pauseButton) {
     pauseButton.textContent = paused ? "▶️ Resume" : "⏸️ Pause";
   }
+
+  if (!paused) {
+    drawGame();
+  }
 }
 
+// UPDATE SCORE
 function updateInfo() {
   const scoreElement = document.getElementById("score");
   const levelElement = document.getElementById("level");
@@ -227,23 +228,25 @@ function updateInfo() {
   if (highScoreElement) highScoreElement.textContent = highScore;
 }
 
+// GAME OVER
 function endGame() {
   clearInterval(game);
   gameOver = true;
-gameOverSound();
-  const finalScore = document.getElementById("finalScore");
 
+  gameOverSound();
+
+  const finalScore = document.getElementById("finalScore");
   if (finalScore) {
     finalScore.textContent = score;
   }
 
   const gameOverScreen = document.getElementById("gameOver");
-
   if (gameOverScreen) {
     gameOverScreen.style.display = "flex";
   }
 }
 
+// HIDE GAME OVER
 function hideGameOver() {
   const gameOverScreen = document.getElementById("gameOver");
 
@@ -252,18 +255,21 @@ function hideGameOver() {
   }
 }
 
-document.getElementById("restart").addEventListener("click", startGame);
+// BUTTONS
+const restartButton = document.getElementById("restart");
+if (restartButton) {
+  restartButton.addEventListener("click", startGame);
+}
 
 const pauseButton = document.getElementById("pause");
-
 if (pauseButton) {
   pauseButton.addEventListener("click", togglePause);
 }
 
 const gameOverRestart = document.getElementById("gameOverRestart");
-
 if (gameOverRestart) {
   gameOverRestart.addEventListener("click", startGame);
 }
 
+// START
 startGame();
