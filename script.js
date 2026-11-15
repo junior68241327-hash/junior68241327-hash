@@ -169,7 +169,6 @@ function drawGame() {
 
   if (headX === food.x && headY === food.y) {
   score++;
-  eatSound();
 
     if (score % 5 === 0) {
       level++;
