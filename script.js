@@ -48,7 +48,7 @@ function playSound(frequency, duration) {
 }
 
 function eatSound() {
-  playSound(1000, 0.15);
+  playSound(600, 0.15);
 }
 
 function gameOverSound() {
