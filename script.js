@@ -147,7 +147,7 @@ function hitSnake(x, y) {
 function changeSpeed() {
   clearInterval(game);
 
-  let speed = Math.max(70, 150 - (level - 1) * 10);
+  let speed = 200;
 
   game = setInterval(drawGame, speed);
 }
